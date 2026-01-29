@@ -1,115 +1,88 @@
 import pandas as pd
 import json
-import os
+from collections import defaultdict
 
-# Load your fights data
-print("📂 Loading fight data...")
-fights_path = '../data/raw_total_fight_data.csv'
-if not os.path.exists(fights_path):
-    print(f"❌ File not found: {fights_path}")
-    exit()
-
-fights = pd.read_csv(fights_path, sep=';')
-print(f"✅ Loaded {len(fights)} fights")
-
-# Function to extract number from "X of Y" format
-def extract_number(val, position=0):
-    """Extract first number from 'X of Y' format"""
-    try:
-        if pd.isna(val):
-            return 0
-        # Handle cases like "41 of 103", "2", "0"
-        if ' of ' in str(val):
-            return float(str(val).split(' of ')[position])
-        else:
-            return float(val)
-    except:
-        return 0
-
-# Dictionary to store all fighter stats
-fighter_stats = {}
-
-print("🔢 Processing fights...")
-for idx, row in fights.iterrows():
-    if idx % 500 == 0:
-        print(f"  Processed {idx}/{len(fights)} fights...")
+def build_fighter_db_for_your_model():
+    """Build fighter database with features YOUR model expects"""
     
-    red_name = str(row['R_fighter']).strip()
-    blue_name = str(row['B_fighter']).strip()
+    print("📊 Building database for YOUR 7-feature model...")
     
-    # Extract ALL stats properly
-    # Knockdowns (direct numbers)
-    red_kd = float(row['R_KD']) if not pd.isna(row['R_KD']) else 0
-    blue_kd = float(row['B_KD']) if not pd.isna(row['B_KD']) else 0
+    # Load your fights CSV
+    df = pd.read_csv('../data/data/Fights.csv')
     
-    # Takedowns (from "X of Y" format)
-    red_td_landed = extract_number(row['R_TD'], 0)
-    blue_td_landed = extract_number(row['B_TD'], 0)
+    # Track fighter career
+    fighters = defaultdict(lambda: {
+        'total_fights': 0,
+        'wins': 0,
+        'losses': 0,
+        'draws': 0,
+        'kd_total': 0,
+        'str_total': 0,
+        'sub_total': 0,  # NEW: submissions
+        'td_total': 0,
+        'fight_history': []  # Track recent fights for streak
+    })
     
-    # Significant strikes (from "X of Y" format)
-    red_strikes = extract_number(row['R_SIG_STR.'], 0)
-    blue_strikes = extract_number(row['B_SIG_STR.'], 0)
-    
-    # Add to fighter stats
-    for name, kd, td, strikes in [
-        (red_name, red_kd, red_td_landed, red_strikes),
-        (blue_name, blue_kd, blue_td_landed, blue_strikes)
-    ]:
-        if name not in fighter_stats:
-            fighter_stats[name] = {
-                "kd": [],      # Knockdowns
-                "td": [],      # Takedowns landed
-                "strikes": [], # Significant strikes landed
-                "fights": 0    # Number of fights
-            }
+    # Process each fight
+    for idx, row in df.iterrows():
+        f1 = row['Fighter_1']
+        f2 = row['Fighter_2']
+        result = row['Result_1']  # 'W', 'L', or 'D'
         
-        fighter_stats[name]["kd"].append(kd)
-        fighter_stats[name]["td"].append(td)
-        fighter_stats[name]["strikes"].append(strikes)
-        fighter_stats[name]["fights"] += 1
-
-print(f"📊 Collected stats for {len(fighter_stats)} fighters")
-
-# Calculate averages
-fighter_averages = {}
-print("📈 Calculating averages...")
-for name, stats in fighter_stats.items():
-    num_fights = stats["fights"]
-    if num_fights > 0:
-        fighter_averages[name] = {
-            "avg_kd": sum(stats["kd"]) / num_fights,
-            "avg_td": sum(stats["td"]) / num_fights,
-            "avg_strikes": sum(stats["strikes"]) / num_fights,
-            "total_fights": num_fights,
-            "total_kd": sum(stats["kd"]),
-            "total_td": sum(stats["td"]),
-            "total_strikes": sum(stats["strikes"])
+        # Update fighter 1
+        fighters[f1]['total_fights'] += 1
+        fighters[f1]['kd_total'] += row.get('KD_1', 0)
+        fighters[f1]['str_total'] += row.get('STR_1', 0)
+        fighters[f1]['sub_total'] += row.get('SUB_1', 0)
+        fighters[f1]['td_total'] += row.get('TD_1', 0)
+        fighters[f1]['fight_history'].append(result)
+        
+        if result == 'W':
+            fighters[f1]['wins'] += 1
+        elif result == 'L':
+            fighters[f1]['losses'] += 1
+        else:
+            fighters[f1]['draws'] += 1
+        
+        # Update fighter 2  
+        fighters[f2]['total_fights'] += 1
+        fighters[f2]['kd_total'] += row.get('KD_2', 0)
+        fighters[f2]['str_total'] += row.get('STR_2', 0)
+        fighters[f2]['sub_total'] += row.get('SUB_2', 0)
+        fighters[f2]['td_total'] += row.get('TD_2', 0)
+        fighters[f2]['fight_history'].append('W' if result == 'L' else 'L' if result == 'W' else 'D')
+        
+        if result == 'W':
+            fighters[f2]['losses'] += 1
+        elif result == 'L':
+            fighters[f2]['wins'] += 1
+        else:
+            fighters[f2]['draws'] += 1
+    
+    # Calculate final stats
+    fighter_db = {}
+    for name, stats in fighters.items():
+        total = stats['total_fights']
+        wins = stats['wins']
+        
+        # Calculate win streak (last 3 fights)
+        recent = stats['fight_history'][-3:] if len(stats['fight_history']) >= 3 else stats['fight_history']
+        win_streak = sum(1 for r in recent if r == 'W')
+        
+        fighter_db[name] = {
+            'win_rate': wins / total if total > 0 else 0.5,
+            'total_fights': total,
+            'win_streak': win_streak,
+            'avg_kd': stats['kd_total'] / total if total > 0 else 0,
+            'avg_strikes': stats['str_total'] / total if total > 0 else 0,
+            'avg_sub': stats['sub_total'] / total if total > 0 else 0,  # NEW
+            'avg_td': stats['td_total'] / total if total > 0 else 0
         }
-    else:
-        fighter_averages[name] = {
-            "avg_kd": 0,
-            "avg_td": 0,
-            "avg_strikes": 0,
-            "total_fights": 0,
-            "total_kd": 0,
-            "total_td": 0,
-            "total_strikes": 0
-        }
+    
+    print(f"✅ Built database with {len(fighter_db)} fighters")
+    return fighter_db
 
-# Save to JSON
-output_path = 'fighter_database_detailed.json'
-with open(output_path, 'w') as f:
-    json.dump(fighter_averages, f, indent=2)
-
-print(f"✅ Saved detailed database with {len(fighter_averages)} fighters to {output_path}")
-
-# Show sample
-print("\n📋 Sample fighters:")
-sample_fighters = list(fighter_averages.keys())[:5]
-for name in sample_fighters:
-    stats = fighter_averages[name]
-    print(f"  {name}:")
-    print(f"    Fights: {stats['total_fights']}")
-    print(f"    Avg KD: {stats['avg_kd']:.2f}")
-    print(f"    Avg TD: {stats['avg_td']:.2f}")
-    print(f"    Avg Strikes: {stats['avg_strikes']:.1f}")
+# Build and save
+FIGHTER_DB = build_fighter_db_for_your_model()
+with open('fighter_database_your_model.json', 'w') as f:
+    json.dump(FIGHTER_DB, f, indent=2)

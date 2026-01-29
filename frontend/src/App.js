@@ -23,6 +23,7 @@ function App() {
       if (!response.ok) throw new Error('Prediction failed');
       
       const data = await response.json();
+      console.log('API Response:', data); // Debug log
       setPrediction(data);
     } catch (error) {
       alert('Error: ' + error.message);
@@ -43,7 +44,7 @@ function App() {
           <h2>RED CORNER</h2>
           <input
             type="text"
-            placeholder="Conor McGregor"
+            placeholder="Enter fighter name"
             value={redFighter}
             onChange={(e) => setRedFighter(e.target.value)}
           />
@@ -55,7 +56,7 @@ function App() {
           <h2>BLUE CORNER</h2>
           <input
             type="text"
-            placeholder="Khabib Nurmagomedov"
+            placeholder="Enter fighter name"
             value={blueFighter}
             onChange={(e) => setBlueFighter(e.target.value)}
           />
@@ -69,10 +70,26 @@ function App() {
       {prediction && (
         <div className="prediction">
           <h3>🎯 PREDICTION</h3>
-          <div className="winner">WINNER: {prediction.predicted_winner}</div>
-          <div className="prob red-prob">Red: {prediction.red_win_probability}</div>
-          <div className="prob blue-prob">Blue: {prediction.blue_win_probability}</div>
+          <div className="fight-name">{prediction.fight}</div>
+          <div className="winner">WINNER: {prediction.prediction}</div>
           <div className="confidence">Confidence: {prediction.confidence}</div>
+          
+          {/* Display probabilities - FIXED */}
+          {prediction.probabilities && (
+            <div className="probabilities">
+              <div className="prob">
+                {redFighter}: {prediction.probabilities[redFighter] || 'N/A'}
+              </div>
+              <div className="prob">
+                {blueFighter}: {prediction.probabilities[blueFighter] || 'N/A'}
+              </div>
+            </div>
+          )}
+          
+          {/* Show if it's a close fight */}
+          {prediction.is_close_fight && (
+            <div className="close-fight">⚠️ This is a close fight!</div>
+          )}
         </div>
       )}
     </div>

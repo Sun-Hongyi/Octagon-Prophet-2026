@@ -1,36 +1,41 @@
-# api.py
+# api.py - CLEAN VERSION (NO DEBUG)
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware  # ← ADD THIS
+from fastapi.middleware.cors import CORSMiddleware  
 import joblib
-import json
+import warnings
+import pandas as pd
 import sys
 import os
+
+# Suppress scikit-learn version warnings
+from sklearn.exceptions import InconsistentVersionWarning
+warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 from src.predictor import PredictorService
 from src.fighter_service import FighterService
 
-app = FastAPI(title="UFC Predictor API", version="1.0")
-
-# CORS middleware - ALLOWS React to call this API
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Your React app URL
-    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allow all headers
+app = FastAPI(
+    title="UFC Predictor API", 
+    version="1.0",
+    description="API for predicting UFC fights"
 )
 
-# Load model and setup services
-print("🔧 Loading ML model...")
-model = joblib.load('models/ufc_model.pkl')
-scaler = joblib.load('models/ufc_scaler.pkl')
-predictor = PredictorService(model, scaler)
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-print("📊 Loading fighter database...")
-fighter_service = FighterService('fighter_database_detailed.json')
+# Load model
+model = joblib.load('models/ufc_predictor.joblib')
+predictor = PredictorService(model)
 
-print("✅ UFC Predictor API ready!")
+# Load fighter database
+fighter_service = FighterService('fighter_database_your_model.json')
 
 @app.get("/")
 def home():
@@ -39,22 +44,35 @@ def home():
         "version": "1.0",
         "endpoints": {
             "GET /": "This page",
-            "GET /predict": "Predict with stats (kd, strikes, takedowns)",
+            "GET /predict": "Predict with raw features",
             "GET /predict-fight": "Predict with fighter names (red_name, blue_name)",
             "GET /search/{query}": "Search fighters by name"
         }
     }
 
 @app.get("/predict")
-def predict(kd: float, strikes: float, takedowns: float):
-    """Predict fight outcome using raw stats differences"""
+def predict(kd_diff: float, str_diff: float, sub_diff: float, td_diff: float, 
+            win_rate_diff: float, exp_diff: float, streak_diff: float):
+    """Predict using all 7 features"""
     try:
-        probability = predictor.predict_from_stats(kd, strikes, takedowns)
+        features = pd.DataFrame([{
+            'kd_diff': kd_diff,
+            'str_diff': str_diff,
+            'sub_diff': sub_diff,
+            'td_diff': td_diff,
+            'win_rate_diff': win_rate_diff,
+            'exp_diff': exp_diff,
+            'streak_diff': streak_diff
+        }])
+        
+        probability = predictor.model.predict_proba(features)[0, 1]
+        
         return predictor.format_prediction_response(
             probability=probability,
-            red_name="Red Fighter",
-            blue_name="Blue Fighter"
+            fighter1_name="Fighter 1",
+            fighter2_name="Fighter 2"
         )
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Prediction failed: {str(e)}")
 
@@ -62,20 +80,17 @@ def predict(kd: float, strikes: float, takedowns: float):
 def predict_fight(red_name: str, blue_name: str):
     """Predict fight outcome using fighter names"""
     try:
-        # Get fighter stats
         red_stats = fighter_service.get_fighter(red_name)
         blue_stats = fighter_service.get_fighter(blue_name)
         
-        # Make prediction
         probability = predictor.predict_from_fighters(red_stats, blue_stats)
         
-        # Format response
         return predictor.format_prediction_response(
             probability=probability,
-            red_name=red_name,
-            blue_name=blue_name,
-            red_stats=red_stats,
-            blue_stats=blue_stats
+            fighter1_name=red_name,
+            fighter2_name=blue_name,
+            fighter1_stats=red_stats,
+            fighter2_stats=blue_stats
         )
         
     except ValueError as e:
