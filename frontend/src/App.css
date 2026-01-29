@@ -1,0 +1,182 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background: #0a0a0a;
+  color: white;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, #ff0000, #000000);
+  border-radius: 20px;
+  margin-bottom: 40px;
+  box-shadow: 0 10px 30px rgba(255, 0, 0, 0.3);
+}
+
+header h1 {
+  font-size: 3.5em;
+  margin-bottom: 10px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+header p {
+  font-size: 1.2em;
+  opacity: 0.9;
+}
+
+.fight-inputs {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 40px;
+  background: #1a1a1a;
+  padding: 30px;
+  border-radius: 15px;
+}
+
+.fighter {
+  flex: 1;
+  padding: 25px;
+  border-radius: 12px;
+  text-align: center;
+  transition: transform 0.3s;
+}
+
+.fighter:hover {
+  transform: translateY(-5px);
+}
+
+.fighter.red {
+  background: linear-gradient(135deg, #2a0000, #4a0000);
+  border: 3px solid #ff0000;
+}
+
+.fighter.blue {
+  background: linear-gradient(135deg, #00002a, #00004a);
+  border: 3px solid #0066ff;
+}
+
+.fighter h2 {
+  margin-bottom: 20px;
+  font-size: 1.5em;
+  color: #fff;
+}
+
+.fighter input {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.2em;
+  background: #333;
+  color: white;
+  border: 2px solid #555;
+  border-radius: 8px;
+  outline: none;
+}
+
+.fighter input:focus {
+  border-color: #ff9900;
+}
+
+.vs {
+  font-size: 2em;
+  font-weight: bold;
+  color: #ffcc00;
+  padding: 0 20px;
+}
+
+button {
+  width: 100%;
+  padding: 20px;
+  font-size: 1.5em;
+  background: linear-gradient(135deg, #ff0000, #cc0000);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 40px;
+  transition: all 0.3s;
+}
+
+button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #cc0000, #990000);
+  transform: scale(1.02);
+  box-shadow: 0 5px 20px rgba(255, 0, 0, 0.4);
+}
+
+button:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+.prediction {
+  background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+  padding: 30px;
+  border-radius: 15px;
+  border-left: 8px solid #00cc00;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.prediction h3 {
+  color: #ffcc00;
+  margin-bottom: 25px;
+  font-size: 1.8em;
+  text-align: center;
+}
+
+.winner {
+  font-size: 1.8em;
+  color: #00ff00;
+  margin: 20px 0;
+  padding: 15px;
+  background: rgba(0, 255, 0, 0.1);
+  border-radius: 10px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.prob {
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1.3em;
+  margin: 15px 0;
+  font-weight: bold;
+}
+
+.red-prob {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff6666;
+  border: 2px solid #ff0000;
+}
+
+.blue-prob {
+  background: rgba(0, 102, 255, 0.2);
+  color: #66aaff;
+  border: 2px solid #0066ff;
+}
+
+.confidence {
+  padding: 15px;
+  background: rgba(255, 204, 0, 0.2);
+  border-radius: 10px;
+  color: #ffcc00;
+  margin: 20px 0;
+  text-align: center;
+  font-size: 1.2em;
+  border: 2px solid #ffcc00;
+}
+
